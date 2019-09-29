@@ -7,6 +7,10 @@ from pdf_bookmark import RomanOutOfRangeError
 from pdf_bookmark import roman_to_arabic
 from pdf_bookmark import arabic_to_roman
 
+from pdf_bookmark import InvalidLettersNumeralError
+from pdf_bookmark import letters_to_arabic
+from pdf_bookmark import arabic_to_letters
+
 
 INVALID_ROMAN = (
     '',
@@ -81,3 +85,45 @@ def test_out_of_range_roman():
 def test_arabic_to_roman():
     for arabic, roman in ROMAN_PAIRS:
         assert arabic_to_roman(arabic) == roman
+
+
+INVALID_LETTERS = (
+    '0',
+    '0342',
+    'a',
+    'ABC',
+    'AAAAAA8',
+    '9BBBB',
+    '&*-+#',
+    '12345',
+    'jflaiffj',
+    '+=_-&^%#!$%#*&)~`,.><',
+)
+
+LETTERS_PAIRS = (
+    (0, ''),
+    (1, 'A'),
+    (2, 'B'),
+    (3, 'C'),
+    (8, 'H'),
+    (26, 'Z'),
+    (27, 'AA'),
+    (52, 'ZZ'),
+    (106, 'BBBBB'),
+)
+
+
+def test_invalid_letter():
+    for letters in INVALID_LETTERS:
+        with pytest.raises(InvalidLettersNumeralError):
+            letters_to_arabic(letters)
+
+
+def test_letters_to_arabic():
+    for arabic, letters in LETTERS_PAIRS:
+        assert letters_to_arabic(letters) == arabic
+
+
+def test_arabic_to_letters():
+    for arabic, letters in LETTERS_PAIRS:
+        assert arabic_to_letters(arabic) == letters

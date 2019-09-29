@@ -61,6 +61,10 @@ class InvalidLettersNumeralError(InvalidNumeralError):
     '''Invalid letters numeral expression'''
 
 
+class LettersOutOfRangeError(Exception):
+    '''The letters number is out of range'''
+
+
 def roman_to_arabic(roman):
     '''
     Convert roman to arabic
@@ -111,9 +115,30 @@ def letters_to_arabic(letters):
     Convert letters to arabic
     '''
     if not letters:
-        raise InvalidLettersNumeralError('No input found')
+        return 0
 
-    return 0
+    letter = letters[0]
+    if ord(letter) < ord('A') or ord(letter) > ord('Z'):
+        raise InvalidLettersNumeralError('Must be capital letter')
+
+    for digit in letters[1:]:
+        if digit != letter:
+            raise InvalidLettersNumeralError('Letters are not identical')
+
+    return len(letters)*26 - 25 + ord(letter) - ord('A')
+
+
+def arabic_to_letters(arabic):
+    '''
+    Convert arabic to letters
+    '''
+    if arabic < 0:
+        raise LettersOutOfRangeError('Letters numeral must >= 0')
+
+    if arabic == 0:
+        return ''
+
+    return chr(((arabic-1) % 26) + ord('A')) * ((arabic+25) // 26)
 
 
 def call(cmd, encoding=None):
@@ -160,7 +185,8 @@ def main():
     '''
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('pdf', metavar='PDF', help='an input PDF')
-    parser.add_argument('--expand-level', help='the max level to be expanded')
+    parser.add_argument(
+        '--expand-level', help='the max level to be expanded')
 
     args = parser.parse_args()
 
