@@ -11,6 +11,7 @@ import subprocess
 import re
 import argparse
 import json
+import codecs
 
 
 _NUM_STYLE_MAP = {
@@ -208,7 +209,7 @@ def call(cmd, encoding=None):
     return out
 
 
-def pdftk_to_bookmarks(data):
+def pdftk_to_bookmark(data):
     '''
     Convert pdftk output to bookmark
     '''
@@ -257,7 +258,7 @@ def pdftk_to_bookmarks(data):
     return bookmarks
 
 
-def export_bookmarks(bookmarks):
+def export_bookmark(bookmarks):
     '''
     Export to bookmark format
     '''
@@ -343,7 +344,7 @@ def _split_title_page(title_page):
     return title.strip(), page.strip()
 
 
-def import_bookmarks(bookmark_data, collapse_level=0):
+def import_bookmark(bookmark_data, collapse_level=0):
     '''
     Import bookmark format
     '''
@@ -413,6 +414,66 @@ def import_bookmarks(bookmark_data, collapse_level=0):
     return bookmarks
 
 
+def _pdfmark_unicode(string):
+    r"""
+    >>> _pdfmark_unicode('ascii text with ) paren')
+    '(ascii text with \\) paren)'
+    >>> _pdfmark_unicode('\u03b1\u03b2\u03b3')
+    '<FEFF03B103B203B3>'
+    """
+    try:
+        string.encode('ascii')
+    except UnicodeEncodeError:
+        b = codecs.BOM_UTF16_BE + string.encode('utf-16-be')
+        return '<{}>'.format(''.join('{:02X}'.format(byte) for byte in b))
+    else:
+        # escape special characters
+        for a, b in [('\\', '\\\\'), ('(', '\\('), (')', '\\)'),
+                     ('\n', '\\n'), ('\t', '\\t')]:
+            string = string.replace(a, b)
+        return '({})'.format(string)
+
+
+def _pdfmark_unicode_decode(string):
+    r"""
+    >>> _pdfmark_unicode_decode(_pdfmark_unicode('\u03b1\u03b2\u03b3'))
+    '\u03b1\u03b2\u03b3'
+    """
+    if not (string.startswith('<FEFF') and string.endswith('>')):
+        raise Exception
+
+    b = bytes(int(float.fromhex(x1+x2))
+              for x1, x2 in zip(string[5:-2:2], string[6:-1:2]))
+    return b.decode('utf-16-be')
+
+
+def bookmark_to_pdfmark(bookmarks):
+    '''
+    Convert bookmark to pdfmark
+    '''
+    pdfmark = ''
+
+    for i, bm in enumerate(bookmarks['bookmark']):
+        pdfmark += '['
+
+        count = 0
+        for bmk in bookmarks['bookmark'][i+1:]:
+            if bmk['level'] == bm['level']:
+                break
+            if bmk['level'] == bm['level'] + 1:
+                count += 1
+        if count:
+            sign = '-' if bm.get('collapse') else ''
+            pdfmark += '/Count {}{} '.format(sign, count)
+
+        pdfmark += '/Title {} /Page {} '.format(
+            _pdfmark_unicode(bm['title']), bm['page'])
+
+        pdfmark += '/OUT pdfmark\n'
+
+    return pdfmark
+
+
 def main():
     '''
     The main process
@@ -440,19 +501,21 @@ def main():
 
     if args.bookmark is not None:
         with open(args.bookmark) as f:
-            bookmarks = import_bookmarks(f.read(), args.collapse_level)
+            bookmarks = import_bookmark(f.read(), args.collapse_level)
     else:
         pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
 
         if args.format == 'pdftk':
             print(pdftk_data, end='')
 
-        bookmarks = pdftk_to_bookmarks(pdftk_data)
+        bookmarks = pdftk_to_bookmark(pdftk_data)
 
     if args.format == 'json':
         print(json.dumps(bookmarks))
     elif args.format == 'bookmark':
-        print(export_bookmarks(bookmarks), end='')
+        print(export_bookmark(bookmarks), end='')
+    elif args.format == 'pdfmark':
+        print(bookmark_to_pdfmark(bookmarks), end='')
 
     return 0
 
