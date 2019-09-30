@@ -10,6 +10,7 @@ import sys
 import subprocess
 import re
 import argparse
+import json
 
 
 _NUM_STYLE_MAP = {
@@ -253,18 +254,20 @@ def pdftk_to_bookmarks(data):
             bookmarks[bm_type].append(bookmark_info[bm_type])
             bookmark_info[bm_type] = {}
 
-    return bookmarks['bookmark'], bookmarks['page_label']
+    return bookmarks
 
 
-def export_bookmarks(bookmarks, page_labels):
+def export_bookmarks(bookmarks):
     '''
     Export to bookmark format
     '''
     bm_output = ''
 
+    page_labels = bookmarks['page_label']
+
     current_page_label_index = -1
 
-    for bm in bookmarks:
+    for bm in bookmarks['bookmark']:
         page_label_index = -1
         for i, pl in enumerate(page_labels):
             if bm['page'] >= pl['new_index']:
@@ -294,7 +297,7 @@ def export_bookmarks(bookmarks, page_labels):
         else:
             page = bm['page']
 
-        bm_output += '{}{}..........{}\n'.format(
+        bm_output += '{}{}................{}\n'.format(
             '  '*(bm['level']-1), bm['title'], page)
 
     return bm_output
@@ -324,14 +327,15 @@ def _parse_level(line, level_indent):
 
 
 def _split_title_page(title_page):
-    start_pos = title_page.find('.'*8)
+    start_pos = title_page.find('.'*4)
     if start_pos < 0:
-        raise InvalidBookmarkSyntaxError('At least 8 "." must be specified')
+        raise InvalidBookmarkSyntaxError('At least 4 "." must be specified')
 
-    end_pos = start_pos + 8
-    for c in title_page[start_pos+8:]:
-        if c == '.':
-            end_pos += 1
+    end_pos = start_pos + 4
+    for c in title_page[start_pos+4:]:
+        if c != '.':
+            break
+        end_pos += 1
 
     title = title_page[:start_pos]
     page = title_page[end_pos:]
@@ -343,7 +347,9 @@ def import_bookmarks(bookmark_data, collapse_level=0):
     '''
     Import bookmark format
     '''
-    bookmarks = []
+    bookmarks = {}
+    bookmarks['bookmark'] = []
+    bookmarks['page_label'] = []
 
     page_config = {
         'new_index': 1,
@@ -353,6 +359,8 @@ def import_bookmarks(bookmark_data, collapse_level=0):
         'level_indent': 2,
     }
 
+    page_label_saved = False
+
     for line in bookmark_data.splitlines():
         if not line.strip():
             continue
@@ -360,6 +368,7 @@ def import_bookmarks(bookmark_data, collapse_level=0):
         if line.startswith('!!!'):
             k, v = _parse_bookmark_command(line)
             if k == 'new_index':
+                page_label_saved = False
                 page_config[k] = int(v)
                 page_config['num_start'] = 1
                 page_config['num_style'] = 'Arabic'
@@ -368,6 +377,11 @@ def import_bookmarks(bookmark_data, collapse_level=0):
             else:
                 page_config[k] = v
             continue
+
+        if not page_label_saved:
+            bookmarks['page_label'].append({kk: vv for kk, vv in page_config.items() if kk in [
+                'new_index', 'num_start', 'num_style']})
+            page_label_saved = True
 
         level, title_page = _parse_level(line, page_config['level_indent'])
 
@@ -394,7 +408,7 @@ def import_bookmarks(bookmark_data, collapse_level=0):
             'page': page,
             'collapse': collapse,
         }
-        bookmarks.append(bookmark_info)
+        bookmarks['bookmark'].append(bookmark_info)
 
     return bookmarks
 
@@ -406,7 +420,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         '-f', '--format', default='bookmark',
-        help='the output format of bookmark: bookmark(default), none, pdftk, pdfmark, json')
+        choices=['bookmark', 'none', 'pdftk', 'pdfmark', 'json'],
+        help='the output format of bookmark')
     parser.add_argument(
         '-l', '--collapse-level', default=0,
         help='the min level to be collapsed, 0 to collapse all')
@@ -425,16 +440,19 @@ def main():
 
     if args.bookmark is not None:
         with open(args.bookmark) as f:
-            bookmarks = import_bookmarks(
-                f.read(), args.collapse_level)
-            print(bookmarks)
-        return 0
+            bookmarks = import_bookmarks(f.read(), args.collapse_level)
+    else:
+        pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
 
-    pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
+        if args.format == 'pdftk':
+            print(pdftk_data, end='')
 
-    bookmarks, page_labels = pdftk_to_bookmarks(pdftk_data)
+        bookmarks = pdftk_to_bookmarks(pdftk_data)
 
-    print(export_bookmarks(bookmarks, page_labels))
+    if args.format == 'json':
+        print(json.dumps(bookmarks))
+    elif args.format == 'bookmark':
+        print(export_bookmarks(bookmarks), end='')
 
     return 0
 
