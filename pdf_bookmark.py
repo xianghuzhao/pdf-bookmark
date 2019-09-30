@@ -63,12 +63,12 @@ BOOKMARK_DESCRIPTION = {
         'prefix': 'PageLabel',
         'fields': {
             'NewIndex': 'new_index',
-            'Start': 'start',
+            'Start': 'num_start',
             'NumStyle': 'num_style',
         },
         'handler': {
             'new_index': int,
-            'start': int,
+            'num_start': int,
             'num_style': lambda s: _NUM_STYLE_MAP.get(s, 'Arabic'),
         },
     },
@@ -76,6 +76,10 @@ BOOKMARK_DESCRIPTION = {
 
 
 _UNICODE_REGEXP = re.compile('&#([0-9]+);')
+
+
+class InvalidBookmarkSyntaxError(Exception):
+    '''Invalid bookmark syntax'''
 
 
 class InvalidNumeralError(Exception):
@@ -271,18 +275,17 @@ def export_bookmarks(bookmarks, page_labels):
                 if current_page_label_index >= 0:
                     bm_output += '\n'
 
-                bm_output += '!!! new_index = {}\n'.format(
-                    page_labels[page_label_index]['new_index'])
-                bm_output += '!!! start = {}\n'.format(
-                    page_labels[page_label_index]['start'])
-                bm_output += '!!! num_style = {}\n\n'.format(
-                    page_labels[page_label_index]['num_style'])
+                for k in ['new_index', 'num_start', 'num_style']:
+                    bm_output += '!!! {} = {}\n'.format(
+                        k, page_labels[page_label_index][k])
+
+                bm_output += '\n'
 
                 current_page_label_index = page_label_index
 
             page = bm['page'] - \
                 page_labels[page_label_index]['new_index'] + \
-                page_labels[page_label_index]['start']
+                page_labels[page_label_index]['num_start']
 
             if page_labels[page_label_index]['num_style'] == 'Roman':
                 page = arabic_to_roman(page)
@@ -297,16 +300,125 @@ def export_bookmarks(bookmarks, page_labels):
     return bm_output
 
 
+def _parse_bookmark_command(line):
+    try:
+        k, v = line[3:].split('=', 1)
+    except ValueError:
+        raise InvalidBookmarkSyntaxError('Invalid syntax: {}'.format(line))
+
+    return k.strip(), v.strip()
+
+
+def _parse_level(line, level_indent):
+    space_count = 0
+    for c in line:
+        if c != ' ':
+            break
+        space_count += 1
+
+    if space_count % level_indent != 0:
+        raise InvalidBookmarkSyntaxError(
+            'Level indentation error: {}'.format(line))
+
+    return space_count // level_indent + 1, line[space_count:]
+
+
+def _split_title_page(title_page):
+    start_pos = title_page.find('.'*8)
+    if start_pos < 0:
+        raise InvalidBookmarkSyntaxError('At least 8 "." must be specified')
+
+    end_pos = start_pos + 8
+    for c in title_page[start_pos+8:]:
+        if c == '.':
+            end_pos += 1
+
+    return title_page[:start_pos], title_page[end_pos:]
+
+
+def import_bookmarks(bookmark_data, expand_level=0):
+    '''
+    Import bookmark format
+    '''
+    bookmarks = []
+    page_labels = []
+
+    page_config = {
+        'new_index': 1,
+        'num_start': 1,
+        'num_style': 'Arabic',
+        'expand_level': expand_level,
+        'level_indent': 2,
+    }
+
+    page_label_saved = False
+
+    for line in bookmark_data.splitlines():
+        if not line.strip():
+            continue
+
+        if line.startswith('!!!'):
+            k, v = _parse_bookmark_command(line)
+            if k == 'new_index':
+                page_label_saved = False
+                page_config[k] = int(v)
+                page_config['num_start'] = 1
+                page_config['num_style'] = 'Arabic'
+            elif k in ['num_start', 'expand_level', 'level_indent']:
+                page_config[k] = int(v)
+            else:
+                page_config[k] = v
+            continue
+
+        if not page_label_saved:
+            page_labels.append({kk: vv for kk, vv in page_config.items() if kk in [
+                'new_index', 'num_start', 'num_style']})
+            page_label_saved = True
+
+        level, title_page = _parse_level(line, page_config['level_indent'])
+
+        title, page = _split_title_page(title_page)
+
+        bookmark_info = {
+            'level': level,
+            'title': title,
+            'page': page,
+            'collapse': False,
+        }
+        bookmarks.append(bookmark_info)
+
+    return bookmarks, page_labels
+
+
 def main():
     '''
     The main process
     '''
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('pdf', metavar='PDF', help='an input PDF')
     parser.add_argument(
-        '--expand-level', help='the max level to be expanded')
+        '-f', '--format', default='bookmark',
+        help='the output format of bookmark: bookmark(default), none, pdftk, pdfmark, json')
+    parser.add_argument(
+        '-l', '--expand-level', default=0, help='the max level to be expanded, 0 to expand all')
+    parser.add_argument(
+        '-b', '--bookmark', help='the bookmark file to be imported')
+    parser.add_argument(
+        '-p', '--pdf', help='the input PDF file')
+    parser.add_argument(
+        '-o', '--output-pdf', help='the output PDF file')
 
     args = parser.parse_args()
+
+    if args.bookmark is None and args.pdf is None:
+        parser.print_help()
+        return 1
+
+    if args.bookmark is not None:
+        with open(args.bookmark) as f:
+            bookmarks, page_labels = import_bookmarks(
+                f.read(), args.expand_level)
+            print(bookmarks, page_labels)
+        return 0
 
     pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
 
