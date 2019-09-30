@@ -82,7 +82,7 @@ class InvalidBookmarkSyntaxError(Exception):
     '''Invalid bookmark syntax'''
 
 
-class InvalidNumeralError(Exception):
+class InvalidNumeralError(ValueError):
     '''Invalid numeral expression'''
 
 
@@ -333,25 +333,25 @@ def _split_title_page(title_page):
         if c == '.':
             end_pos += 1
 
-    return title_page[:start_pos], title_page[end_pos:]
+    title = title_page[:start_pos]
+    page = title_page[end_pos:]
+
+    return title.strip(), page.strip()
 
 
-def import_bookmarks(bookmark_data, expand_level=0):
+def import_bookmarks(bookmark_data, collapse_level=0):
     '''
     Import bookmark format
     '''
     bookmarks = []
-    page_labels = []
 
     page_config = {
         'new_index': 1,
         'num_start': 1,
         'num_style': 'Arabic',
-        'expand_level': expand_level,
+        'collapse_level': collapse_level,
         'level_indent': 2,
     }
-
-    page_label_saved = False
 
     for line in bookmark_data.splitlines():
         if not line.strip():
@@ -360,34 +360,43 @@ def import_bookmarks(bookmark_data, expand_level=0):
         if line.startswith('!!!'):
             k, v = _parse_bookmark_command(line)
             if k == 'new_index':
-                page_label_saved = False
                 page_config[k] = int(v)
                 page_config['num_start'] = 1
                 page_config['num_style'] = 'Arabic'
-            elif k in ['num_start', 'expand_level', 'level_indent']:
+            elif k in ['num_start', 'collapse_level', 'level_indent']:
                 page_config[k] = int(v)
             else:
                 page_config[k] = v
             continue
 
-        if not page_label_saved:
-            page_labels.append({kk: vv for kk, vv in page_config.items() if kk in [
-                'new_index', 'num_start', 'num_style']})
-            page_label_saved = True
-
         level, title_page = _parse_level(line, page_config['level_indent'])
 
         title, page = _split_title_page(title_page)
+
+        try:
+            if page_config['num_style'] == 'Roman':
+                page = roman_to_arabic(page.upper())
+            elif page_config['num_style'] == 'Letters':
+                page = letters_to_arabic(page.upper())
+            else:
+                page = int(page)
+        except ValueError:
+            raise InvalidBookmarkSyntaxError(
+                'Page number invalid: {}'.format(page))
+
+        page = page - page_config['num_start'] + page_config['new_index']
+
+        collapse = page_config['collapse_level'] != 0 and level >= page_config['collapse_level']
 
         bookmark_info = {
             'level': level,
             'title': title,
             'page': page,
-            'collapse': False,
+            'collapse': collapse,
         }
         bookmarks.append(bookmark_info)
 
-    return bookmarks, page_labels
+    return bookmarks
 
 
 def main():
@@ -399,7 +408,8 @@ def main():
         '-f', '--format', default='bookmark',
         help='the output format of bookmark: bookmark(default), none, pdftk, pdfmark, json')
     parser.add_argument(
-        '-l', '--expand-level', default=0, help='the max level to be expanded, 0 to expand all')
+        '-l', '--collapse-level', default=0,
+        help='the min level to be collapsed, 0 to collapse all')
     parser.add_argument(
         '-b', '--bookmark', help='the bookmark file to be imported')
     parser.add_argument(
@@ -415,9 +425,9 @@ def main():
 
     if args.bookmark is not None:
         with open(args.bookmark) as f:
-            bookmarks, page_labels = import_bookmarks(
-                f.read(), args.expand_level)
-            print(bookmarks, page_labels)
+            bookmarks = import_bookmarks(
+                f.read(), args.collapse_level)
+            print(bookmarks)
         return 0
 
     pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
