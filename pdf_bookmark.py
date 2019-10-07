@@ -6,11 +6,13 @@
 Import and export PDF bookmark
 '''
 
+import os
 import sys
 import subprocess
 import re
 import argparse
 import json
+import tempfile
 import codecs
 
 
@@ -41,13 +43,12 @@ _ROMAN_NUMERAL_PAIR = (
 
 _ROMAN_NUMERAL_MAP = {pair[0]: pair[1] for pair in _ROMAN_NUMERAL_PAIR}
 
-
 _ROMAN_NUMERAL_PATTERN = re.compile(
     '^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$'
 )
 
 
-BOOKMARK_DESCRIPTION = {
+_BOOKMARK_DESCRIPTION = {
     'bookmark': {
         'prefix': 'Bookmark',
         'fields': {
@@ -78,6 +79,9 @@ BOOKMARK_DESCRIPTION = {
 
 
 _UNICODE_REGEXP = re.compile('&#([0-9]+);')
+
+
+_CONTENT_MINIMUM_DOTS = 4
 
 
 class InvalidBookmarkSyntaxError(Exception):
@@ -209,16 +213,14 @@ def call(cmd, encoding=None):
     return out
 
 
-def pdftk_to_bookmark(data):
+def import_pdftk(data, collapse_level=0):
     '''
     Convert pdftk output to bookmark
     '''
-    bookmark_types = ['bookmark', 'page_label']
-
     bookmarks = {}
     bookmark_info = {}
 
-    for t in bookmark_types:
+    for t in _BOOKMARK_DESCRIPTION:
         bookmarks[t] = []
         bookmark_info[t] = {}
 
@@ -228,9 +230,7 @@ def pdftk_to_bookmark(data):
         except ValueError:  # e.g. line == 'InfoBegin'
             continue
 
-        for bm_type in bookmark_types:
-            bm_detail = BOOKMARK_DESCRIPTION[bm_type]
-
+        for bm_type, bm_detail in _BOOKMARK_DESCRIPTION.items():
             if not key.startswith(bm_detail['prefix']):
                 continue
 
@@ -252,21 +252,26 @@ def pdftk_to_bookmark(data):
             if not ready_for_save:
                 continue
 
+            bookmark_info[bm_type]['collapse'] = collapse_level != 0 and \
+                bookmark_info[bm_type]['level'] >= collapse_level
+
             bookmarks[bm_type].append(bookmark_info[bm_type])
             bookmark_info[bm_type] = {}
 
     return bookmarks
 
 
-def export_bookmark(bookmarks):
+def export_bmk(bookmarks):
     '''
     Export to bookmark format
     '''
-    bm_output = ''
+    bm_output = '!!! # Generated bmk file\n'
 
     page_labels = bookmarks['page_label']
 
     current_page_label_index = -1
+
+    current_collapse_level = 0
 
     for bm in bookmarks['bookmark']:
         page_label_index = -1
@@ -276,8 +281,7 @@ def export_bookmark(bookmarks):
 
         if page_label_index >= 0:
             if page_label_index != current_page_label_index:
-                if current_page_label_index >= 0:
-                    bm_output += '\n'
+                bm_output += '\n'
 
                 for k in ['new_index', 'num_start', 'num_style']:
                     bm_output += '!!! {} = {}\n'.format(
@@ -298,6 +302,13 @@ def export_bookmark(bookmarks):
         else:
             page = bm['page']
 
+        # This is a XOR of (bm['collapse']) and
+        # (current_collapse_level == 0 or current_collapse_level > bm['level'])
+        if bm['collapse'] == (current_collapse_level == 0 or current_collapse_level > bm['level']):
+            current_collapse_level = bm['level'] if bm['collapse'] else 0
+            bm_output += '!!! collapse_level = {}\n'.format(
+                current_collapse_level)
+
         bm_output += '{}{}................{}\n'.format(
             '  '*(bm['level']-1), bm['title'], page)
 
@@ -305,6 +316,9 @@ def export_bookmark(bookmarks):
 
 
 def _parse_bookmark_command(line):
+    if line[3:].lstrip().startswith('#'):
+        return '', ''
+
     try:
         k, v = line[3:].split('=', 1)
     except ValueError:
@@ -328,12 +342,13 @@ def _parse_level(line, level_indent):
 
 
 def _split_title_page(title_page):
-    start_pos = title_page.find('.'*4)
+    start_pos = title_page.find('.'*_CONTENT_MINIMUM_DOTS)
     if start_pos < 0:
-        raise InvalidBookmarkSyntaxError('At least 4 "." must be specified')
+        raise InvalidBookmarkSyntaxError(
+            'There must be at least {} "." specified'.format(_CONTENT_MINIMUM_DOTS))
 
-    end_pos = start_pos + 4
-    for c in title_page[start_pos+4:]:
+    end_pos = start_pos + _CONTENT_MINIMUM_DOTS
+    for c in title_page[start_pos+_CONTENT_MINIMUM_DOTS:]:
         if c != '.':
             break
         end_pos += 1
@@ -344,7 +359,7 @@ def _split_title_page(title_page):
     return title.strip(), page.strip()
 
 
-def import_bookmark(bookmark_data, collapse_level=0):
+def import_bmk(bookmark_data, collapse_level=0):
     '''
     Import bookmark format
     '''
@@ -368,6 +383,8 @@ def import_bookmark(bookmark_data, collapse_level=0):
 
         if line.startswith('!!!'):
             k, v = _parse_bookmark_command(line)
+            if not k:
+                continue
             if k == 'new_index':
                 page_label_saved = False
                 page_config[k] = int(v)
@@ -447,7 +464,7 @@ def _pdfmark_unicode_decode(string):
     return b.decode('utf-16-be')
 
 
-def bookmark_to_pdfmark(bookmarks):
+def export_pdfmark(bookmarks):
     '''
     Convert bookmark to pdfmark
     '''
@@ -474,17 +491,83 @@ def bookmark_to_pdfmark(bookmarks):
     return pdfmark
 
 
+def _write_pdfmark_noop_file():
+    # By default, Ghostscript will preserve pdfmarks from the sources PDFs
+    fd, filename = tempfile.mkstemp(prefix='pdfmark-noop-', text=True)
+    # Make `[... /OUT pdfmark` a no-op.
+    os.write(fd, b"""
+% store the original pdfmark
+/originalpdfmark { //pdfmark } bind def
+
+% replace pdfmark with a wrapper that ignores OUT
+/pdfmark
+{
+  {  % begin loop
+
+      { counttomark pop }
+    stopped
+      { /pdfmark errordict /unmatchedmark get exec stop }
+    if
+
+    dup type /nametype ne
+      { /pdfmark errordict /typecheck get exec stop }
+    if
+
+    dup /OUT eq
+      { (Skipping OUT pdfmark\n) print cleartomark exit }
+    if
+
+    originalpdfmark exit
+
+  } loop
+} def
+""")
+    os.close(fd)
+    return filename
+
+
+def _write_pdfmark_restore_file():
+    fd, filename = tempfile.mkstemp(prefix='pdfmark-restore-', text=True)
+    # Restore the default `[... /Out pdfmark` behaviour
+    os.write(fd, b'/pdfmark { originalpdfmark } bind def\n')
+    os.close(fd)
+    return filename
+
+
+def generate_pdf(pdfmark, pdf, output_pdf):
+    '''
+    Generate pdf from pdfmark and pdf file
+    '''
+    fd, pdfmark_file = tempfile.mkstemp(prefix='pdfmark_')
+    with open(fd, 'w') as f:
+        f.write(pdfmark)
+
+    pdfmark_noop = _write_pdfmark_noop_file()
+    pdfmark_restore = _write_pdfmark_restore_file()
+
+    call(['gs', '-dBATCH', '-dNOPAUSE', '-sDEVICE=pdfwrite',
+          '-sOutputFile={}'.format(output_pdf),
+          pdfmark_noop,
+          pdf,
+          pdfmark_restore,
+          pdfmark_file])
+
+    os.remove(pdfmark_noop)
+    os.remove(pdfmark_restore)
+    os.remove(pdfmark_file)
+
+
 def main():
     '''
     The main process
     '''
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '-f', '--format', default='bookmark',
-        choices=['bookmark', 'none', 'pdftk', 'pdfmark', 'json'],
+        '-f', '--format', default='bmk',
+        choices=['bmk', 'none', 'pdftk', 'pdfmark', 'json'],
         help='the output format of bookmark')
     parser.add_argument(
-        '-l', '--collapse-level', default=0,
+        '-l', '--collapse-level', default=0, type=int,
         help='the min level to be collapsed, 0 to collapse all')
     parser.add_argument(
         '-b', '--bookmark', help='the bookmark file to be imported')
@@ -495,27 +578,34 @@ def main():
 
     args = parser.parse_args()
 
-    if args.bookmark is None and args.pdf is None:
+    if args.bookmark is None and args.pdf is None or \
+            args.pdf is None and args.output_pdf is not None:
         parser.print_help()
         return 1
 
     if args.bookmark is not None:
         with open(args.bookmark) as f:
-            bookmarks = import_bookmark(f.read(), args.collapse_level)
+            bookmarks = import_bmk(f.read(), args.collapse_level)
     else:
         pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
 
         if args.format == 'pdftk':
             print(pdftk_data, end='')
 
-        bookmarks = pdftk_to_bookmark(pdftk_data)
+        bookmarks = import_pdftk(pdftk_data, args.collapse_level)
+
+    if args.format == 'pdfmark' or (args.output_pdf is not None and args.pdf is not None):
+        pdfmark = export_pdfmark(bookmarks)
 
     if args.format == 'json':
         print(json.dumps(bookmarks))
-    elif args.format == 'bookmark':
-        print(export_bookmark(bookmarks), end='')
+    elif args.format == 'bmk':
+        print(export_bmk(bookmarks), end='')
     elif args.format == 'pdfmark':
-        print(bookmark_to_pdfmark(bookmarks), end='')
+        print(pdfmark, end='')
+
+    if args.output_pdf is not None:
+        generate_pdf(pdfmark, args.pdf, args.output_pdf)
 
     return 0
 
