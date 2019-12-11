@@ -5,8 +5,8 @@ PDF-Bookmark is a tool for import and export pdf bookmark
 with the ``bmk`` format.
 
 
-`bmk` format
-------------
+``bmk`` format
+--------------
 
 The ``bmk`` format is used to describe the bookmark of a pdf file.
 It can be used to import bookmark into a pdf file.
@@ -37,7 +37,9 @@ This is a simple example of a ``bmk`` file. ::
     Chapter 3................20
     Appendix................36
 
-Import the bookmark and create a new pdf file::
+Import the bookmark and create a new pdf file:
+
+.. code-block:: shell
 
     $ pdf_bookmark.py -p input.pdf -b bookmark.bmk -o new.pdf
 
@@ -72,7 +74,9 @@ Export ``bmk`` format
 ^^^^^^^^^^^^^^^^^^^^^
 
 The ``bmk`` file could also be exported from a pdf file with bookmark.
-You may also modify the bookmark from the exported one. ::
+You may also modify the bookmark from the exported one.
+
+.. code-block:: shell
 
     $ pdf_bookmark.py -p input.pdf
 
@@ -94,11 +98,15 @@ PDFtk is used here to export bookmark from pdf file.
 The java port `pdftk-java <https://gitlab.com/pdftk-java/pdftk>`_
 may also be OK.
 
-On Arch Linux, ``pdftk-java`` could be installed by::
+On Arch Linux, ``pdftk-java`` could be installed by:
+
+.. code-block:: shell
 
     $ sudo pacman -S pdftk java-commons-lang
 
-Verify the installation::
+Verify the installation:
+
+.. code-block:: shell
 
     $ pdftk --version
 
@@ -108,11 +116,15 @@ Ghostscript
 
 Ghostscript is used here to import bookmark to pdf file.
 
-On Arch Linux, it could be installed by::
+On Arch Linux, it could be installed by:
+
+.. code-block:: shell
 
     $ sudo pacman -S ghostscript
 
-Verify the installation::
+Verify the installation:
+
+.. code-block:: shell
 
     $ gs --version
 
@@ -120,23 +132,26 @@ Verify the installation::
 Command
 -------
 
-::
+.. code-block:: shell
 
-    usage: pdf_bookmark.py [-h] [-f {bmk,none,pdftk,pdfmark,json}] [-l COLLAPSE_LEVEL] [-b BOOKMARK] [-p PDF] [-o OUTPUT_PDF]
+    $ pdf-bookmark -h
+    usage: pdf_bookmark.py [-h] [-f {bmk,none,pdftk,pdfmark,json}]
+                           [-l COLLAPSE_LEVEL] [-b BOOKMARK] [-p PDF]
+                           [-o OUTPUT_PDF]
 
     Import and export PDF bookmark
 
-        optional arguments:
-          -h, --help            show this help message and exit
-          -f {bmk,none,pdftk,pdfmark,json}, --format {bmk,none,pdftk,pdfmark,json}
-                                the output format of bookmark
-          -l COLLAPSE_LEVEL, --collapse-level COLLAPSE_LEVEL
-                                the min level to be collapsed, 0 to expand all
-          -b BOOKMARK, --bookmark BOOKMARK
-                                the bookmark file to be imported
-          -p PDF, --pdf PDF     the input PDF file
-          -o OUTPUT_PDF, --output-pdf OUTPUT_PDF
-                                the output PDF file
+    optional arguments:
+      -h, --help            show this help message and exit
+      -f {bmk,none,pdftk,pdfmark,json}, --format {bmk,none,pdftk,pdfmark,json}
+                            the output format of bookmark
+      -l COLLAPSE_LEVEL, --collapse-level COLLAPSE_LEVEL
+                            the min level to be collapsed, 0 to expand all
+      -b BOOKMARK, --bookmark BOOKMARK
+                            the bookmark file to be imported
+      -p PDF, --pdf PDF     the input PDF file
+      -o OUTPUT_PDF, --output-pdf OUTPUT_PDF
+                            the output PDF file
 
 
 Example
@@ -145,7 +160,7 @@ Example
 Change the collapse level
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-::
+.. code-block:: shell
 
     $ pdf_bookmark.py -p input.pdf -l 2 -o new.pdf
 
