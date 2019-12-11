@@ -37,9 +37,7 @@ This is a simple example of a ``bmk`` file. ::
     Chapter 3................20
     Appendix................36
 
-Import the bookmark and create a new pdf file:
-
-.. code-block:: shell
+Import the bookmark and create a new pdf file::
 
     $ pdf_bookmark.py -p input.pdf -b bookmark.bmk -o new.pdf
 
@@ -74,9 +72,7 @@ Export ``bmk`` format
 ^^^^^^^^^^^^^^^^^^^^^
 
 The ``bmk`` file could also be exported from a pdf file with bookmark.
-You may also modify the bookmark from the exported one.
-
-.. code-block:: shell
+You may also modify the bookmark from the exported one. ::
 
     $ pdf_bookmark.py -p input.pdf
 
@@ -98,15 +94,11 @@ PDFtk is used here to export bookmark from pdf file.
 The java port `pdftk-java <https://gitlab.com/pdftk-java/pdftk>`_
 may also be OK.
 
-On Arch Linux, ``pdftk-java`` could be installed by:
-
-.. code-block:: shell
+On Arch Linux, ``pdftk-java`` could be installed by::
 
     $ sudo pacman -S pdftk java-commons-lang
 
-Verify the installation:
-
-.. code-block:: shell
+Verify the installation::
 
     $ pdftk --version
 
@@ -116,15 +108,11 @@ Ghostscript
 
 Ghostscript is used here to import bookmark to pdf file.
 
-On Arch Linux, it could be installed by:
-
-.. code-block:: shell
+On Arch Linux, it could be installed by::
 
     $ sudo pacman -S ghostscript
 
-Verify the installation:
-
-.. code-block:: shell
+Verify the installation::
 
     $ gs --version
 
@@ -132,12 +120,10 @@ Verify the installation:
 Command
 -------
 
-.. code-block:: shell
+::
 
-    $ pdf-bookmark -h
-    usage: pdf_bookmark.py [-h] [-f {bmk,none,pdftk,pdfmark,json}]
-                           [-l COLLAPSE_LEVEL] [-b BOOKMARK] [-p PDF]
-                           [-o OUTPUT_PDF]
+    usage: pdf-bookmark [-h] [-f {bmk,none,pdftk,pdfmark,json}]
+                        [-l COLLAPSE_LEVEL] [-b BOOKMARK] [-p PDF] [-o OUTPUT_PDF]
 
     Import and export PDF bookmark
 
@@ -160,7 +146,7 @@ Example
 Change the collapse level
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: shell
+::
 
     $ pdf_bookmark.py -p input.pdf -l 2 -o new.pdf
 
