@@ -590,7 +590,7 @@ def main():
         pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
 
         if args.format == 'pdftk':
-            print(pdftk_data, end='')
+            sys.stdout.write(pdftk_data)
 
         bookmarks = import_pdftk(pdftk_data, args.collapse_level)
 
@@ -600,9 +600,9 @@ def main():
     if args.format == 'json':
         print(json.dumps(bookmarks))
     elif args.format == 'bmk':
-        print(export_bmk(bookmarks), end='')
+        sys.stdout.write(export_bmk(bookmarks))
     elif args.format == 'pdfmark':
-        print(pdfmark, end='')
+        sys.stdout.write(pdfmark)
 
     if args.output_pdf is not None:
         generate_pdf(pdfmark, args.pdf, args.output_pdf)
