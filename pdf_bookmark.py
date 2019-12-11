@@ -544,27 +544,38 @@ def _write_pdfmark_restore_file():
     return filename
 
 
+def _write_pdfmark_pagemode():
+    fd, filename = tempfile.mkstemp(prefix='pagemode_', text=True)
+    os.write(
+        fd, b'[ /PageMode /UseOutlines /View [/FitV] /Page 1 /DOCVIEW pdfmark\n')
+    os.close(fd)
+    return filename
+
+
 def generate_pdf(pdfmark, pdf, output_pdf):
     '''
     Generate pdf from pdfmark and pdf file
     '''
-    fd, pdfmark_file = tempfile.mkstemp(prefix='pdfmark_')
-    os.write(fd, pdfmark)
+    fd, pdfmark_file = tempfile.mkstemp(prefix='pdfmark_', text=True)
+    os.write(fd, pdfmark.encode())
     os.close(fd)
 
     pdfmark_noop = _write_pdfmark_noop_file()
     pdfmark_restore = _write_pdfmark_restore_file()
+    pdfmark_pagemode = _write_pdfmark_pagemode()
 
     call(['gs', '-dBATCH', '-dNOPAUSE', '-sDEVICE=pdfwrite',
           '-sOutputFile={}'.format(output_pdf),
           pdfmark_noop,
           pdf,
           pdfmark_restore,
-          pdfmark_file])
+          pdfmark_file,
+          pdfmark_pagemode])
 
     os.remove(pdfmark_noop)
     os.remove(pdfmark_restore)
     os.remove(pdfmark_file)
+    os.remove(pdfmark_pagemode)
 
 
 def main():
