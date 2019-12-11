@@ -108,6 +108,16 @@ class LettersOutOfRangeError(Exception):
     '''The letters number is out of range'''
 
 
+def echo(s, nl=True):
+    '''
+    Print to stdout
+    '''
+    sys.stdout(s)
+    if nl:
+        sys.stdout('\n')
+    sys.stdout.flush()
+
+
 def roman_to_arabic(roman):
     '''
     Convert roman to arabic
@@ -580,7 +590,7 @@ def main():
 
     if args.bookmark is None and args.pdf is None or \
             args.pdf is None and args.output_pdf is not None:
-        parser.print_help()
+        parser.print_help(sys.stderr)
         return 1
 
     if args.bookmark is not None:
@@ -590,7 +600,7 @@ def main():
         pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
 
         if args.format == 'pdftk':
-            sys.stdout.write(pdftk_data)
+            echo(pdftk_data, nl=False)
 
         bookmarks = import_pdftk(pdftk_data, args.collapse_level)
 
@@ -598,11 +608,11 @@ def main():
         pdfmark = export_pdfmark(bookmarks)
 
     if args.format == 'json':
-        print(json.dumps(bookmarks))
+        echo(json.dumps(bookmarks))
     elif args.format == 'bmk':
-        sys.stdout.write(export_bmk(bookmarks))
+        echo(export_bmk(bookmarks), nl=False)
     elif args.format == 'pdfmark':
-        sys.stdout.write(pdfmark)
+        echo(pdfmark, nl=False)
 
     if args.output_pdf is not None:
         generate_pdf(pdfmark, args.pdf, args.output_pdf)
