@@ -112,9 +112,9 @@ def echo(s, nl=True):
     '''
     Print to stdout
     '''
-    sys.stdout(s)
+    sys.stdout.write(s)
     if nl:
-        sys.stdout('\n')
+        sys.stdout.write('\n')
     sys.stdout.flush()
 
 
@@ -549,8 +549,8 @@ def generate_pdf(pdfmark, pdf, output_pdf):
     Generate pdf from pdfmark and pdf file
     '''
     fd, pdfmark_file = tempfile.mkstemp(prefix='pdfmark_')
-    with open(fd, 'w') as f:
-        f.write(pdfmark)
+    os.write(fd, pdfmark)
+    os.close(fd)
 
     pdfmark_noop = _write_pdfmark_noop_file()
     pdfmark_restore = _write_pdfmark_restore_file()
@@ -578,7 +578,7 @@ def main():
         help='the output format of bookmark')
     parser.add_argument(
         '-l', '--collapse-level', default=0, type=int,
-        help='the min level to be collapsed, 0 to collapse all')
+        help='the min level to be collapsed, 0 to expand all')
     parser.add_argument(
         '-b', '--bookmark', help='the bookmark file to be imported')
     parser.add_argument(
