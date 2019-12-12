@@ -1,6 +1,10 @@
 PDF-Bookmark
 ============
 
+.. image:: https://badge.fury.io/py/pdf-bookmark.svg
+    :target: https://pypi.org/project/pdf-bookmark/
+    :alt: PyPI
+
 PDF-Bookmark is a tool for import and export pdf bookmark
 with the ``bmk`` format.
 
