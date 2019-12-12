@@ -16,9 +16,7 @@ import tempfile
 import codecs
 
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(HERE, 'VERSION')) as version_file:
-    VERSION = version_file.read().strip()
+VERSION = '1.0.3'
 
 
 _NUM_STYLE_MAP = {
@@ -89,6 +87,10 @@ _UNICODE_REGEXP = re.compile('&#([0-9]+);')
 _CONTENT_MINIMUM_DOTS = 4
 
 
+class CommandError(Exception):
+    '''Run command error'''
+
+
 class InvalidBookmarkSyntaxError(Exception):
     '''Invalid bookmark syntax'''
 
@@ -111,6 +113,10 @@ class InvalidLettersNumeralError(InvalidNumeralError):
 
 class LettersOutOfRangeError(Exception):
     '''The letters number is out of range'''
+
+
+class PdfMarkError(Exception):
+    '''Error dealing with pdfmark'''
 
 
 def echo(s, nl=True, err=False):
@@ -223,13 +229,13 @@ def call(cmd, encoding=None):
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
     except FileNotFoundError:
-        raise Exception('Command not installed: {}'.format(cmd[0]))
+        raise CommandError('Command not installed: {}'.format(cmd[0]))
 
     out, err = p.communicate()
     status = p.wait()
 
     if status != 0:
-        raise Exception(
+        raise CommandError(
             'Invoke command {} failed with exit code {}:\n {}'.format(
                 cmd, status, err.decode(encoding)))
 
@@ -482,7 +488,7 @@ def _pdfmark_unicode_decode(string):
     '\u03b1\u03b2\u03b3'
     """
     if not (string.startswith('<FEFF') and string.endswith('>')):
-        raise Exception
+        raise PdfMarkError
 
     b = bytes(int(float.fromhex(x1+x2))
               for x1, x2 in zip(string[5:-2:2], string[6:-1:2]))

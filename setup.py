@@ -1,25 +1,39 @@
 #!/usr/bin/env python
 
 '''
-setup file for pdf-bookmark package
+The setup file for pdf-bookmark package
 '''
 
 from distutils.core import setup
 import os
-import setuptools
+import re
+import setuptools   # pylint: disable=unused-import
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
-with open(os.path.join(HERE, 'VERSION')) as version_file:
-    VERSION = version_file.read().strip()
 
-with open(os.path.join(HERE, 'README.rst')) as f:
-    LONG_DESCRIPTION = f.read()
+def find_version():
+    '''Find version'''
+    with open(os.path.join(HERE, 'pdf_bookmark.py')) as file_py:
+        content = file_py.read()
+
+    version_match = re.search(
+        r"^VERSION\s*=\s*['\"]([^'\"]*)['\"]", content, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
+
+def find_long_description():
+    '''Find long description'''
+    with open(os.path.join(HERE, 'README.rst')) as file_ld:
+        return file_ld.read()
+
 
 setup(name='pdf-bookmark',
-      version=VERSION,
+      version=find_version(),
       description='PDF Bookmark Import and Export',
-      long_description=LONG_DESCRIPTION,
+      long_description=find_long_description(),
       author='Xianghu Zhao',
       author_email='xianghuzhao@gmail.com',
       url='https://github.com/xianghuzhao/pdf-bookmark',
