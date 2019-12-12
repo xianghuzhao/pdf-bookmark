@@ -83,7 +83,7 @@ This is a simple example of a ``bmk`` file. ::
 
 Import the bookmark and create a new pdf file::
 
-    $ pdf_bookmark.py -p input.pdf -b bookmark.bmk -o new.pdf
+    $ pdf-bookmark -p input.pdf -b bookmark.bmk -o new.pdf
 
 
 Export ``bmk`` format
@@ -92,7 +92,7 @@ Export ``bmk`` format
 The ``bmk`` file could also be exported from a pdf file with bookmark.
 You may also modify the bookmark from the exported one. ::
 
-    $ pdf_bookmark.py -p input.pdf
+    $ pdf-bookmark -p input.pdf
 
 
 Inline command
@@ -173,30 +173,30 @@ Import bookmark
 
 This will import the ``bmk`` bookmark into a pdf file::
 
-    $ pdf_bookmark.py -p input.pdf -b bookmark.bmk -o new.pdf
+    $ pdf-bookmark -p input.pdf -b bookmark.bmk -o new.pdf
 
 If you would like to have a quite output::
 
-    $ pdf_bookmark.py -p input.pdf -b bookmark.bmk -f none -o new.pdf
+    $ pdf-bookmark -p input.pdf -b bookmark.bmk -f none -o new.pdf
 
 Export bookmark
 ^^^^^^^^^^^^^^^
 
 This will export the ``bmk`` bookmark to stdout from a pdf file::
 
-    $ pdf_bookmark.py -p input.pdf
+    $ pdf-bookmark -p input.pdf
 
 The output format could be changed to ``pdfmark``, ``json``::
 
-    $ pdf_bookmark.py -p input.pdf -f pdfmark
-    $ pdf_bookmark.py -p input.pdf -f json
+    $ pdf-bookmark -p input.pdf -f pdfmark
+    $ pdf-bookmark -p input.pdf -f json
 
 Change the collapse level
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This will only change the collapse level of the pdf. ::
 
-    $ pdf_bookmark.py -p input.pdf -l 2 -o new.pdf
+    $ pdf-bookmark -p input.pdf -l 2 -o new.pdf
 
 
 Inline command

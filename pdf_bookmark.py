@@ -108,14 +108,19 @@ class LettersOutOfRangeError(Exception):
     '''The letters number is out of range'''
 
 
-def echo(s, nl=True):
+def echo(s, nl=True, err=False):
     '''
     Print to stdout
     '''
-    sys.stdout.write(s)
+    if err:
+        out = sys.stderr
+    else:
+        out = sys.stdout
+
+    out.write(s)
     if nl:
-        sys.stdout.write('\n')
-    sys.stdout.flush()
+        out.write('\n')
+    out.flush()
 
 
 def roman_to_arabic(roman):
@@ -209,7 +214,12 @@ def call(cmd, encoding=None):
     if encoding is None:
         encoding = 'utf-8'
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    except FileNotFoundError:
+        raise Exception('Command not installed: {}'.format(cmd[0]))
+
     out, err = p.communicate()
     status = p.wait()
 
