@@ -16,6 +16,11 @@ import tempfile
 import codecs
 
 
+HERE = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(HERE, 'VERSION')) as version_file:
+    VERSION = version_file.read().strip()
+
+
 _NUM_STYLE_MAP = {
     'DecimalArabicNumerals': 'Arabic',
     'UppercaseRomanNumerals': 'Roman',
@@ -606,8 +611,14 @@ def main():
         '-p', '--pdf', help='the input PDF file')
     parser.add_argument(
         '-o', '--output-pdf', help='the output PDF file')
+    parser.add_argument(
+        '-v', '--version', action='store_true', help='version of pdf-bookmark')
 
     args = parser.parse_args()
+
+    if args.version:
+        echo('pdf-bookmark version {}'.format(VERSION))
+        return 0
 
     if args.bookmark is None and args.pdf is None or \
             args.pdf is None and args.output_pdf is not None:
