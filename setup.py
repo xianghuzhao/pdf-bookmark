@@ -23,6 +23,8 @@ setup(name='pdf-bookmark',
       author='Xianghu Zhao',
       author_email='xianghuzhao@gmail.com',
       url='https://github.com/xianghuzhao/pdf-bookmark',
+      license='MIT',
+
       py_modules=['pdf_bookmark'],
       tests_require=['pytest'],
       entry_points={'console_scripts': ['pdf-bookmark = pdf_bookmark:main']},

@@ -123,19 +123,14 @@ first page of pdf, and the page number is not always arabic. ::
 With these inline commands, you do not need to recalculate the index
 number for each page.
 
-We define ``index number`` and ``page number`` in order not to be
-confused:
-
-* index number: The absolute number of the pdf file, which must start from
-  1.
-* page number: The relative number for continuous pages.
-
 Here are all supported inline commands:
 
 #. new_index. Default: 1.
-   The following bookmark page will recalculate the from the new index number.
+   The following bookmark index will be recalculated the from the
+   new index number (new_index + page - 1).
 #. num_start. Default: 1.
-   Specify the number of first page if it does not start from 1.
+   Specify the number of first page if it does not start from 1
+   (new_index + page - num_start).
 #. num_style. Default: Arabic.
    The page number style. Could be "Arabic", "Roman" and "Letters".
 
