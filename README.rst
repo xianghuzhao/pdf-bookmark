@@ -201,7 +201,3 @@ Change the collapse level
 This will only change the collapse level of the pdf. ::
 
     $ pdf-bookmark -p input.pdf -l 2 -o new.pdf
-
-
-Inline command
---------------
