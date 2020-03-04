@@ -16,7 +16,7 @@ Installation
 
     $ pip install pdf-bookmark
 
-``pdf-bookmark`` utilize
+``pdf-bookmark`` utilizes
 `PDFtk <https://www.pdflabs.com/tools/pdftk-server/>`_
 and `Ghostscript <https://www.ghostscript.com>`_
 to export and import pdf bookmarks.
@@ -70,9 +70,6 @@ The level of a bookmark is specified by the indentation of spaces.
 The default indentation is 2 spaces, and the number of spaces could be
 configured with inline command.
 
-Unicode titles are supported. Please make sure the file is saved with
-UTF-8 encoding.
-
 This is a simple example of a ``bmk`` file. ::
 
     序................1
@@ -110,6 +107,8 @@ the line until it is changed again.
 It is normal that the main body of a pdf file does not start from the
 first page of pdf, and the page number is not always arabic. ::
 
+    !!! collapse_level = 2
+
     !!! num_style = Roman
     Preface................I
     Content................IV
@@ -129,22 +128,22 @@ number for each page.
 
 Here are all supported inline commands:
 
-#. new_index. Default: 1.
-   The following bookmark index will be recalculated the from the
-   new index number (new_index + page - 1).
-#. num_start. Default: 1.
+#. ``new_index``. Default: 1.
+   The following bookmark index will be recalculated from the
+   new index number (``new_index + page - 1``).
+#. ``num_start``. Default: 1.
    Specify the number of first page if it does not start from 1
-   (new_index + page - num_start).
-#. num_style. Default: Arabic.
-   The page number style. Could be "Arabic", "Roman" and "Letters".
+   (``new_index + page - num_start``).
+#. ``num_style``. Default: ``Arabic``.
+   The page number style. Could be ``Arabic``, ``Roman`` and ``Letters``.
 
-#. collapse_level. Default: 0.
+#. ``collapse_level``. Default: 0.
    On which level the bookmarks are collapsed. 0 means expand all.
-#. level_indent. Default: 2.
+#. ``level_indent``. Default: 2.
    Number of indentation spaces for a new level.
 
 
-``pdf-bookmark`` Command
+``pdf-bookmark`` command
 ------------------------
 
 The ``pdf-bookmark`` command is installed by ``pip install pdf-bookmark``.
