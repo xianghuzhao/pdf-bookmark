@@ -16,7 +16,7 @@ import tempfile
 import codecs
 
 
-VERSION = '1.0.3'
+VERSION = '1.1.0'
 
 
 _NUM_STYLE_MAP = {

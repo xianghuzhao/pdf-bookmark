@@ -26,20 +26,22 @@ def find_version():
 
 def find_long_description():
     '''Find long description'''
-    with open(os.path.join(HERE, 'README.rst')) as file_ld:
+    with open(os.path.join(HERE, 'README.md')) as file_ld:
         return file_ld.read()
 
 
-setup(name='pdf-bookmark',
-      version=find_version(),
-      description='PDF Bookmark Import and Export',
-      long_description=find_long_description(),
-      author='Xianghu Zhao',
-      author_email='xianghuzhao@gmail.com',
-      url='https://github.com/xianghuzhao/pdf-bookmark',
-      license='MIT',
+setup(
+    name='pdf-bookmark',
+    version=find_version(),
+    description='PDF Bookmark Import and Export',
+    long_description=find_long_description(),
+    long_description_content_type='text/markdown',
+    author='Xianghu Zhao',
+    author_email='xianghuzhao@gmail.com',
+    url='https://github.com/xianghuzhao/pdf-bookmark',
+    license='MIT',
 
-      py_modules=['pdf_bookmark'],
-      tests_require=['pytest'],
-      entry_points={'console_scripts': ['pdf-bookmark = pdf_bookmark:main']},
-      )
+    py_modules=['pdf_bookmark'],
+    tests_require=['pytest'],
+    entry_points={'console_scripts': ['pdf-bookmark = pdf_bookmark:main']},
+)
