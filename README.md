@@ -13,8 +13,8 @@ $ pip install pdf-bookmark
 ```
 
 `pdf-bookmark` utilizes
-[PDFtk](https://www.pdflabs.com/tools/pdftk-server/>)
-and [Ghostscript](https://www.ghostscript.com>)
+[PDFtk](https://www.pdflabs.com/tools/pdftk-server/)
+and [Ghostscript](https://www.ghostscript.com/)
 to export and import pdf bookmarks.
 They must be installed before running `pdf-bookmark`.
 
