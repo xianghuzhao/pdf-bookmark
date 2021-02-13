@@ -376,7 +376,7 @@ def _split_title_page(title_page):
     start_pos = title_page.find('.'*_CONTENT_MINIMUM_DOTS)
     if start_pos < 0:
         raise InvalidBookmarkSyntaxError(
-            'There must be at least {} "." specified'.format(_CONTENT_MINIMUM_DOTS))
+            'There must be at least {} "." specified in the line "{}"'.format(_CONTENT_MINIMUM_DOTS,title_page))
 
     end_pos = start_pos + _CONTENT_MINIMUM_DOTS
     for c in title_page[start_pos+_CONTENT_MINIMUM_DOTS:]:
