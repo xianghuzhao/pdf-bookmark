@@ -14,7 +14,17 @@ import argparse
 import json
 import tempfile
 import codecs
+import html
 
+h = html
+try:
+    # Python 2.6-2.7
+    from HTMLParser import HTMLParser
+except ImportError:
+    # Python 3
+    from html.parser import HTMLParser
+    # for python 3
+    h = html.parser
 
 VERSION = '1.1.0'
 
@@ -376,7 +386,7 @@ def _split_title_page(title_page):
     start_pos = title_page.find('.'*_CONTENT_MINIMUM_DOTS)
     if start_pos < 0:
         raise InvalidBookmarkSyntaxError(
-            'There must be at least {} "." specified in the line "{}"'.format(_CONTENT_MINIMUM_DOTS,title_page))
+            'There must be at least {} "." specified'.format(_CONTENT_MINIMUM_DOTS))
 
     end_pos = start_pos + _CONTENT_MINIMUM_DOTS
     for c in title_page[start_pos+_CONTENT_MINIMUM_DOTS:]:
@@ -585,7 +595,7 @@ def generate_pdf(pdfmark, pdf, output_pdf):
     pdfmark_restore = _write_pdfmark_restore_file()
     pdfmark_pagemode = _write_pdfmark_pagemode()
 
-    call(['gs', '-dBATCH', '-dNOPAUSE', '-sDEVICE=pdfwrite', '-dAutoRotatePages=/None',
+    call(['gs', '-dBATCH', '-dNOPAUSE', '-sDEVICE=pdfwrite',
           '-sOutputFile={}'.format(output_pdf),
           pdfmark_noop,
           pdf,
@@ -599,6 +609,20 @@ def generate_pdf(pdfmark, pdf, output_pdf):
     os.remove(pdfmark_pagemode)
 
 
+def generate_pdf_without_bookmarks(input_pdf):
+    '''
+    Generates a temporary pdf without its bookmarks
+    '''
+    tempname = next(tempfile._get_candidate_names())
+    call(['pdftk', r'A={}'.format(input_pdf), 'cat', 'A1-end', 'output', tempname], 'ascii')
+    return tempname
+
+def remove_pdf_without_bookmarks(tempfile):
+    '''
+    Removes the temporary PDF file without bookmarks
+    '''
+    os.remove(tempfile)
+
 def main():
     '''
     The main process
@@ -611,6 +635,8 @@ def main():
     parser.add_argument(
         '-l', '--collapse-level', default=0, type=int,
         help='the min level to be collapsed, 0 to expand all')
+    parser.add_argument(
+        '-c', '--clear-bookmarks', action='store_true', help='clear existing bookmarks')
     parser.add_argument(
         '-b', '--bookmark', help='the bookmark file to be imported')
     parser.add_argument(
@@ -633,14 +659,17 @@ def main():
 
     if args.bookmark is not None:
         with open(args.bookmark) as f:
-            bookmarks = import_bmk(f.read(), args.collapse_level)
+            if args.format is None or args.format == 'bmk':
+                bookmarks = import_bmk(f.read(), args.collapse_level)
+            elif args.format == 'pdftk':
+                bookmarks = import_pdftk(h.unescape(f.read()), args.collapse_level)
     else:
         pdftk_data = call(['pdftk', args.pdf, 'dump_data'], 'ascii')
 
         if args.format == 'pdftk':
             echo(pdftk_data, nl=False)
 
-        bookmarks = import_pdftk(pdftk_data, args.collapse_level)
+        bookmarks = import_pdftk(h.unescape(pdftk_data), args.collapse_level)
 
     if args.format == 'pdfmark' or (args.output_pdf is not None and args.pdf is not None):
         pdfmark = export_pdfmark(bookmarks)
@@ -652,9 +681,18 @@ def main():
     elif args.format == 'pdfmark':
         echo(pdfmark, nl=False)
 
+    # Create a temporary PDF file without bookmarks and set it as the input file
+    if args.clear_bookmarks:
+        temp_name = generate_pdf_without_bookmarks(args.pdf)
+        args.pdf = temp_name
+
     if args.output_pdf is not None:
         generate_pdf(pdfmark, args.pdf, args.output_pdf)
 
+    # Remove the temporary PDF file without bookmarks
+    if args.clear_bookmarks:
+        remove_pdf_without_bookmarks(args.pdf)
+        
     return 0
 
 
